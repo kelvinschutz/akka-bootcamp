@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Remoting.Messaging;
 using Akka.Actor;
 
 namespace WinTail
@@ -9,31 +10,41 @@ namespace WinTail
     /// </summary>
     class ConsoleReaderActor : UntypedActor
     {
+        public const string StartCommand = "start";
         public const string ExitCommand = "exit";
-        private IActorRef _consoleWriterActor;
+        private IActorRef _validationActor;
 
-        public ConsoleReaderActor(IActorRef consoleWriterActor)
+        public ConsoleReaderActor(IActorRef validationActor)
         {
-            _consoleWriterActor = consoleWriterActor;
+            _validationActor = validationActor;
         }
 
         protected override void OnReceive(object message)
         {
-            var read = Console.ReadLine();
-            if (!string.IsNullOrEmpty(read) && String.Equals(read, ExitCommand, StringComparison.OrdinalIgnoreCase))
+            if (message.Equals(StartCommand))
             {
-                // shut down the system (acquire handle to system via
-                // this actors context)
-                Context.System.Terminate();
-                return;
+                DoPrintInstructions();
             }
-
-            // send input to the console writer to process and print
-            // YOU NEED TO FILL IN HERE
-
-            // continue reading messages from the console
-            // YOU NEED TO FILL IN HERE
+            
+            GetAndValidateInput();
         }
 
+        private void DoPrintInstructions()
+        {
+            Console.WriteLine("Write whatever you want into the console!");
+            Console.WriteLine("Some entries will pass validation, and some won't...\n\n");
+            Console.WriteLine("Type 'exit' to quit this application at any time.\n");
+        }
+
+        private void GetAndValidateInput()
+        {
+            var message = Console.ReadLine();
+            if (!string.IsNullOrEmpty(message) && String.Equals(message, ExitCommand, StringComparison.OrdinalIgnoreCase))
+            {
+                Context.System.Terminate();
+            }
+            
+            _validationActor.Tell(message);
+        }
     }
 }
